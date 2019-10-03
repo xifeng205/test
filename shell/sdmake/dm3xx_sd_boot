@@ -1,0 +1,163 @@
+#!/bin/sh 
+
+#  PROJECT     : TI Booting and Flashing Utilities
+#  AUTHOR      : Constantine Shulyupin http://www.LinuxDriver.co.il/
+#  DESC        : SD card boot and flashing tool for DM355 and DM365
+#  LICENSE     : GNU General Public License
+
+set -o allexport
+
+SUCCESS="\\033[2;32m"
+BLUE="\\033[1;34m"
+RED="\\033[0;31m"
+WARNING="\\033[0;33m"
+NOCOLOR="\\033[0;39m"
+GREENU="\033[4;32m"
+
+sdc_mnt=/mnt/sdc
+export PATH=$PATH:./
+
+data_file=`ls ./ | grep kba8w-sw-image | grep .bin | awk {'print $1'}`
+
+echo_success() {
+  $SETCOLOR_SUCCESS
+  printf  "$SUCCESS$*$NOCOLOR\n"
+}
+
+echo_failure() {
+  printf "$RED$*$NOCOLOR\n"
+}
+
+dm3xx_boot_data_addr_get()
+{
+	if [ -z "$dm3xx_boot_data_addr" ]; then 
+		sd=$1
+		if [ -z "$sd" ]; then 
+			echo_failure Please specify right SD card device, e.g. /dev/sdc
+			return 1
+		fi
+		dd if=$sd of=/tmp/image.fat bs=1024 count=20000
+		export dm3xx_boot_data_addr=0x$(od -A x -t x8 /tmp/image.fat | grep "$(echo -n dm3xx_boot_magic | od -A n -t x8)" | cut -f 1 -d ' ')
+
+	fi
+	printf "dm3xx_boot_data_addr=$dm3xx_boot_data_addr\n"
+}
+
+sdcard_dm3xx_boot()
+{
+	sd=$1
+	if [ -z "$sd" ]; then 
+		echo_failure Please specify right SD card device, e.g. /dev/sdc
+		return 1
+	fi
+	test -b ${sd}1 && part=${sd}1
+	test -b ${sd}p1 && part=${sd}p1
+	
+	mkfs.vfat -F 32 $part
+	dosfslabel $part KBA12W-BOOT
+		
+	mkdir -p $sdc_mnt
+	mount $part $sdc_mnt || ( echo_failure failed to mount SD card && return 1 ) || return
+	dd of=$sdc_mnt/dm3xx.dat bs=1024 seek=15000 count=0 # pad file 7MB
+	echo "dm3xx_boot_magic\n" | dd conv=notrunc of=$sdc_mnt/dm3xx.dat || (echo_failure failed to create data file && return 1) || return
+	sync
+	ls -l $sdc_mnt
+
+    echo "copying data to"
+	dm3xx_boot_rec=dm3xx_boot_rec
+	dm3xx_boot_data_addr_get $sd
+	dm3xx_copy_data=$sdc_mnt/dm3xx.dat
+	dm3xx_boot_make_image	|| ( echo_failure failed to build data image && return 1 ) || return
+	
+	sync
+	
+	echo_success DM355 boot data copied in data file $data_file on
+	df $sdc_mnt/dm3xx.dat
+	# put dm3xx_boot_rec on seek 8th block between MBR and FAT on fat32
+    dd if=$dm3xx_boot_rec of=$sd seek=8 2> /dev/null || ( echo_failure Failed to copy boot record to SD card && return 1) || return	
+	echo_success dm3xx boot record is written
+	
+	umount $sdc_mnt
+    rm -fr /tmp/image.fat  $sdc_mnt $dm3xx_boot_rec
+    echo_success Congratulations! Operation Finished
+}
+
+sdcard_make() 
+{
+	sd=$1
+	if [ -z "$sd" ]; then 
+		echo_failure Please specify SD card device, e.g. /dev/sdc
+		return 1
+	fi
+	test -b ${sd}1 && part1=${sd}1
+	test -b ${sd}p1 && part1=${sd}p1
+	test -b ${sd}1 && part2=${sd}2
+	test -b ${sd}p1 && part2=${sd}p2
+	./sfdisk -s > /dev/null 2> /dev/null || ( echo_failure You need utility ./sfdisk && return 1 ) || return
+	umount $sdc_mnt 2> /dev/null || true
+	umount $part1 2> /dev/null || true
+	umount $part2 2> /dev/null || true
+	printf "cleaning SD card\n"
+	dd if=/dev/zero of=${sd} bs=1024 count=1000
+	printf ",60,b,*\n,,b,*\n"  | ./sfdisk -uM -q $sd  || ( echo_failure Failed to format SD card && return 1 ) || return 
+	mkfs.vfat -F 32 $part1
+	mkfs.vfat -F 32 $part2
+
+	dosfslabel $part1 KBA12W-BOOT
+    dosfslabel $part2 KBA12W-DATA
+    echo_success sd card format ok
+    
+    mkdir -p $sdc_mnt
+	mount $part1 $sdc_mnt || ( echo_failure failed to mount SD card && return 1 ) || return
+	dd of=$sdc_mnt/dm3xx.dat bs=1024 seek=15000 count=0 # pad file 7MB
+	echo "dm3xx_boot_magic\n" | dd conv=notrunc of=$sdc_mnt/dm3xx.dat || (echo_failure failed to create data file && return 1) || return
+	sync
+	ls -l $sdc_mnt
+
+    echo "copying data to"
+	dm3xx_boot_rec=dm3xx_boot_rec
+	dm3xx_boot_data_addr_get $sd
+	dm3xx_copy_data=$sdc_mnt/dm3xx.dat
+	dm3xx_boot_make_image	|| ( echo_failure failed to build data image && return 1 ) || return
+	
+	sync
+	
+	echo_success DM355 boot data copied in data file $data_file on
+	df $sdc_mnt/dm3xx.dat
+	# put dm3xx_boot_rec on seek 8th block between MBR and FAT on fat32
+    dd if=$dm3xx_boot_rec of=$sd seek=8 2> /dev/null || ( echo_failure Failed to copy boot record to SD card && return 1) || return	
+	echo_success dm3xx boot record is written
+	
+	
+    echo_success Congratulations! Operation Finished
+}
+	
+
+
+cmd=$1
+if [ -z "$cmd" ] ; then
+		printf "$GREENU""SD card boot and flashing tool for DM355 and DM365$NOCOLOR\n"
+		printf "2009, by Constantine Shulyupin http://www.LinuxDriver.co.il/ti/dm3xx/sd_boot/\n"
+		printf "$0 usage:\n"
+		printf "$BLUE""make SD card for DM355 boot, run from user 'root': \n$NOCOLOR"
+		printf "\t# $0 make /dev/<sd device>\n"
+else
+shift
+sd=$1
+case "$cmd" in
+	("make"):
+		sdcard_make $* 
+		umount $sdc_mnt
+        rm -fr /tmp/image.fat  $sdc_mnt $dm3xx_boot_rec
+		;;
+	
+	("q"):
+		;;
+		(*):
+		echo_failure unknown command \"$cmd\"
+esac
+
+fi
+set -o allexport
+
+#$*
