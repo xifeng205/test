@@ -1,0 +1,25 @@
+(lp1
+I1
+aI2
+aI3
+ag1
+a.(dp1
+S'a'
+(lp2
+I1
+aF2
+aI3
+ac__builtin__
+complex
+p3
+(F4
+F6
+tRp4
+asS'c'
+NsS'b'
+(S'string'
+p5
+VUnicode string
+p6
+tp7
+s.
