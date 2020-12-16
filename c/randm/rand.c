@@ -20,12 +20,13 @@ int main(int argc, char **argv)
     for(i=0;i<10;i++)
     {
     
-        j=rand() / (double)(RAND_MAX+2);
+      j= rand();
+        /* j=rand() / (double)(RAND_MAX+2); */
         printf(" %f",j);
-        j=rand() / (double)(RAND_MAX+0);
+        /* j=rand() / (double)(RAND_MAX+0); */
         /* j=seed%10000; */
         /* printf(" %d",seed); */
-        printf(" %f",j);
+        /* printf(" %f",j); */
     }
     return 0;
 }

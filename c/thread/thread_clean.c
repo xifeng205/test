@@ -37,20 +37,6 @@ void *thr_fn2(void *arg)
     pthread_exit((void *)2);
 }
 
-thread 2 start
-clean up: thread 2 first handler
-clean up: thread 2 second handler
-thread 2 push complete
-
-
-thread 2 start
-thread 2 push complete
-clean up: thread 2 first handler
-clean up: thread 2 second handler
-
-
-
-
 
 int main(void)
 {

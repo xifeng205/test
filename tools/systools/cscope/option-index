@@ -1,0 +1,8 @@
+-R 
+--append
+--languages=c++ c
+--c++-kinds=+px 
+--fields=+aiKSz 
+--extra=+q
+--exclude=@exclude-index
+

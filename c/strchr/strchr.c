@@ -13,7 +13,7 @@
 
 int main(int argc, char **argv)
 {
-    char *str = "/ho/dsf/c.d";
+    char *str = "ho,dsf,c,d";
     /* char *head = strchr(str, 'd'); */
     /* printf("%s\n", str); */
     /* printf("%s\n", head); */
@@ -25,11 +25,20 @@ int main(int argc, char **argv)
 
     char *next;
 
-    while (next = strchr(str, '/'))
-    {
-        str = next + 1;
-    }
-    printf("%s\n", str);
-    next = strchr(str, '.');
+    /* while (next = strchr(str, ',')) */
+    /* { */
+
+    next = strchr(str, ',');
     printf("%s\n", next);
+    next++;
+    next= strchr(next, ',');
+    printf("%s\n", next);
+    next++;
+    next = strchr(next, ',');
+    printf("%s\n", next);
+    /* } */
 }
+    /* } */
+/* } */
+    /* } */
+/* } */

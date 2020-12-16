@@ -1,0 +1,7 @@
+# anaconda config
+# export LD_LIBRARY_PATH=/home/cuiyunpeng/tools/anaconda/lib:$LD_LIBRARY_PATH
+# export LIBRARY_PATH=/home/cuiyunpeng/tools/anaconda/lib:$LIBRARY_PATH
+# export CPLUS_INCLUDE_PATH="/home/cuiyunpeng/tools/anaconda/include/python3.7m:$CPLUS_INCLUDE_PATH"
+export CPLUS_INCLUDE_PATH="/home/cuiyunpeng/tools/anaconda/include/qt:$CPLUS_INCLUDE_PATH"
+
+
