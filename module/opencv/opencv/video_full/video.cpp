@@ -238,138 +238,65 @@ public:
     cv::threshold(dst, dst, 180, 255, cv::THRESH_BINARY);
   }
 };
-class Featuretracker:public FrameProcessor {
-    private:
-        cv::Mat gray;
-        cv::Mat gray_prev;
-        std::vector<cv::Point2f> points[2];
-        std::vector<cv::Point2f> initial;
-        std::vector<cv::Point2f> features;
-        int max_count;
-        double qlevel;
-        double mini_dist;
-        std::vector<uchar> status;
-        std::vector<float> err;
-    public:
-        Featuretracker():max_count(500), qlevel(0.01), mini_dist(10.) {}
+class Featuretracker : public FrameProcessor {
+private:
+  cv::Mat gray;
+  cv::Mat gray_prev;
+  std::vector<cv::Point2f> points[2];
+  std::vector<cv::Point2f> initial;
+  std::vector<cv::Point2f> features;
+  int max_count;
+  double qlevel;
+  double mini_dist;
+  std::vector<uchar> status;
+  std::vector<float> err;
 
-        void process(cv::Mat &frame, cv::Mat &output) {
-            cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY); 
-            frame.copyTo(output);
-            if (add_new_point()) {
-                detect_feature_points();
-                points[0].insert(points[0].end(),
-                        features.begin(), features.end());
-                initial.insert(initial.end(),
-                        features.begin(), features.end());
-            } 
-            if (gray_prev.empty()) gray.copyTo(gray_prev);
-            cv::calcOpticalFlowPyrLK(gray_prev, gray, points[0], 
-                    points[1], status, err);
-            int k = 0;
-            for (int i = 0; i<points[1].size(); ++i) {
-                if (accept_tracked_point(i)) {
-                    initial[k] = initial[i];
-                    points[1][k++] = points[1][i];
-                } 
-            }
+public:
+  Featuretracker() : max_count(500), qlevel(0.01), mini_dist(10.) {}
 
-            points[1].resize(k);
-            initial.resize(k);
-            handle_tracked_points(frame, output);
-            std::swap(points[1], points[0]);
-            std::swap(gray_prev, gray);
-        }
-        bool add_new_point() {
-            return points[0].size() <= 10;
-        }
-        void detect_feature_points() {
-            cv::goodFeaturesToTrack(gray, features, max_count, 
-                    qlevel, mini_dist); 
-        }
-        bool accept_tracked_point(int i) {
-           return status[i] && 
-               ((abs(points[0][i].x - points[1][i].x))+ 
-               (abs(points[0][i].y- points[1][i].y)) > 2);
-        }
-        void handle_tracked_points(cv::Mat &frame, cv::Mat &output) {
-            for (int i=0; i<points[1].size(); ++i) {
-                cv::line(output, initial[i], points[1][i], 
-                        cv::Scalar(255, 255, 255));
-                cv::circle(output, points[1][i], 3, 
-                        cv::Scalar(255, 255, 255), -1);
-            } 
-        }
+  void process(cv::Mat &frame, cv::Mat &output) {
+    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+    frame.copyTo(output);
+    if (add_new_point()) {
+      detect_feature_points();
+      points[0].insert(points[0].end(), features.begin(), features.end());
+      initial.insert(initial.end(), features.begin(), features.end());
+    }
+    if (gray_prev.empty())
+      gray.copyTo(gray_prev);
+    cv::calcOpticalFlowPyrLK(gray_prev, gray, points[0], points[1], status,
+                             err);
+    int k = 0;
+    for (int i = 0; i < points[1].size(); ++i) {
+      if (accept_tracked_point(i)) {
+        initial[k] = initial[i];
+        points[1][k++] = points[1][i];
+      }
+    }
+
+    points[1].resize(k);
+    initial.resize(k);
+    handle_tracked_points(frame, output);
+    std::swap(points[1], points[0]);
+    std::swap(gray_prev, gray);
+  }
+  bool add_new_point() { return points[0].size() <= 10; }
+  void detect_feature_points() {
+    cv::goodFeaturesToTrack(gray, features, max_count, qlevel, mini_dist);
+  }
+  bool accept_tracked_point(int i) {
+    return status[i] && ((abs(points[0][i].x - points[1][i].x)) +
+                             (abs(points[0][i].y - points[1][i].y)) >
+                         2);
+  }
+  void handle_tracked_points(cv::Mat &frame, cv::Mat &output) {
+    for (int i = 0; i < points[1].size(); ++i) {
+      cv::line(output, initial[i], points[1][i], cv::Scalar(255, 255, 255));
+      cv::circle(output, points[1][i], 3, cv::Scalar(255, 255, 255), -1);
+    }
+  }
 };
 
-
-// class FeatureTracker : public FrameProcessor {
-// private:
-//   cv::Mat gray;
-//   cv::Mat gray_prev;
-//   std::vector<cv::Point2f> points[2];
-//   std::vector<cv::Point2f> initial;
-//   std::vector<cv::Point2f> features;
-//   int max_count;
-//   double qlevel;
-//   double minDist;
-//   std::vector<uchar> status;
-//   std::vector<float> err;
-//
-// public:
-//   FeatureTracker() : max_count(500), qlevel(0.01), minDist(10.) {}
-//   void process(cv::Mat &src, cv::Mat &dst);
-//   bool addNewPoints();
-//   void detectFeaturePoints();
-//   void handleTrackedPoints(cv::Mat &src, cv::Mat &dst);
-//   bool acceptTrackedPoint(int i);
-// };
-// bool FeatureTracker::addNewPoints() { return points[0].size() < 10; }
-// void FeatureTracker::detectFeaturePoints() {
-//   cv::goodFeaturesToTrack(gray_prev, features, max_count, qlevel, minDist);
-// }
-// void FeatureTracker::handleTrackedPoints(cv::Mat &src, cv::Mat &dst) {
-//   for (int i = 0; i < points[1].size(); ++i) {
-//     cv::line(dst, points[0][i], points[1][i], cv::Scalar(255, 255, 255));
-//     cv::circle(dst, points[1][i], 3,cv::Scalar(255, 255, 255), -1);
-//   }
-// }
-// bool FeatureTracker::acceptTrackedPoint(int i) {
-//   return status[i] && (fabs(points[1][i].x - points[0][i].x) +
-//                        fabs(points[1][i].y - points[0][i].y));
-// }
-//
-// void FeatureTracker::process(cv::Mat &src, cv::Mat &dst) {
-//   cv::cvtColor(src, gray, CV_BGR2GRAY);
-//   src.copyTo(dst);
-//
-//   // 1. 特征点检测
-//   if (addNewPoints()) {
-//     detectFeaturePoints();
-//     points[0].insert(points[0].end(), features.begin(), features.end());
-//     initial.insert(points[0].end(), features.begin(), features.end());
-//   }
-//   if (gray_prev.empty())
-//     gray.copyTo(gray_prev);
-//   // 2. 光流跟踪
-//   // cv::calcOpticalFlowPyrLK(gray_prev, gray, points[0], points[1], status, err);
-//   // 3. 特征点筛选
-//   int k = 0;
-//   for (int i = 0; i < points[1].size(); ++i) {
-//     if (acceptTrackedPoint(i)) {
-//       initial[k] = initial[i];
-//       points[1][k++] = points[1][i];
-//     }
-//   }
-//   points[1].resize(k);
-//   initial.resize(k);
-//   // 4. 特征点绘制
-//
-//   handleTrackedPoints(src, dst);
-//   // 5. 特征点及背景前移
-//   std::swap(points[1], points[0]);
-//   std::swap(gray_prev, gray);
-// }
 // process video frame
 int main(int argc, char **argv) {
   VideoProcessor vp;
